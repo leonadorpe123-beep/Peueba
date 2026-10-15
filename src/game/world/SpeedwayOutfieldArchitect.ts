@@ -56,7 +56,7 @@ export class SpeedwayOutfieldArchitect {
    * giving spectators and guests an unobstructed panoramic view of the lake and Curvone apex.
    */
   private static buildLakesidePromenadeBelvedere(
-    materials: OutfieldArchitectMaterials,
+    _materials: OutfieldArchitectMaterials,
     obstaclesList?: StaticObstacle[]
   ): THREE.Group {
     const group = new THREE.Group();

@@ -2582,30 +2582,52 @@ export class SpeedwayTrackBuilder implements ITrackWorld {
   private buildVegetation(): void {
     const trees: TreePlacementConfig[] = [];
 
-    // Add Italian Cypress avenues and Mediterranean stone pines around Curvone Lake, Hairpin Villa, and Marina
+    for (let i = 0; i < 110; i++) {
+      const angle = (i / 110) * Math.PI * 2;
+      const r = 240 + (i % 6) * 38;
+      const tx = Math.cos(angle) * r;
+      const tz = Math.sin(angle) * (r * 0.72) + 40;
+
+      if (this.getMinDistanceToTrack(tx, tz) < 26.0) {
+        continue;
+      }
+
+      // Strictly eliminate all trees along start/finish straight and adjacent to pit buildings / residences
+      if ((tz < -60 && Math.abs(tx) <= 220) || Math.hypot(tx - 105, tz - (-68)) < 38) {
+        continue;
+      }
+
+      const typeChoice = i % 4;
+      const type: 'pine' | 'oak' | 'cypress' | 'bush' =
+        typeChoice === 0 ? 'pine' : typeChoice === 1 ? 'oak' : typeChoice === 2 ? 'cypress' : 'bush';
+      const scale = type === 'bush' ? 1.1 + (i % 3) * 0.2 : 1.2 + (i % 5) * 0.15;
+
+      trees.push({
+        x: tx,
+        z: tz,
+        scale,
+        type,
+        yaw: (i * 1.37) % (Math.PI * 2),
+      });
+    }
+
+    // Add Italian Cypress avenues and Mediterranean stone pines framing the Alpine Lake and Villas
     const cypressAvenues: { x: number; z: number; scale: number; type: 'cypress' | 'pine' }[] = [
-      // Curvone Hillside Villa 1 Approach & North Ridge (framing the panoramic estate)
       { x: 472, z: 15, scale: 1.45, type: 'cypress' },
       { x: 485, z: 0, scale: 1.55, type: 'cypress' },
       { x: 512, z: -10, scale: 1.50, type: 'cypress' },
       { x: 535, z: 8, scale: 1.40, type: 'cypress' },
       { x: 548, z: 28, scale: 1.45, type: 'cypress' },
-
-      // Curvone Lake South Hillside Ridge (framing the south shoreline)
       { x: 518, z: 175, scale: 1.45, type: 'pine' },
       { x: 495, z: 190, scale: 1.40, type: 'pine' },
       { x: 470, z: 205, scale: 1.38, type: 'pine' },
       { x: 445, z: 220, scale: 1.42, type: 'pine' },
-
-      // Hairpin Belvedere Amphitheater Ridge (Backdrop behind Villa 2)
       { x: 25, z: 315, scale: 1.42, type: 'pine' },
       { x: 45, z: 335, scale: 1.55, type: 'cypress' },
       { x: 65, z: 345, scale: 1.65, type: 'cypress' },
       { x: 92, z: 345, scale: 1.50, type: 'cypress' },
       { x: 115, z: 335, scale: 1.45, type: 'cypress' },
       { x: 135, z: 320, scale: 1.38, type: 'pine' },
-
-      // Lakeside Marina Promenade (Flanking Villa 3 along the Mega Straight Outfield)
       { x: 125, z: -196, scale: 1.35, type: 'pine' },
       { x: 140, z: -206, scale: 1.40, type: 'cypress' },
       { x: 160, z: -212, scale: 1.50, type: 'cypress' },

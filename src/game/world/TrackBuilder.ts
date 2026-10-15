@@ -629,8 +629,6 @@ export class TrackBuilder {
         (gltf) => {
           const grandstandModel = gltf.scene;
           let bannerTexture: THREE.Texture | null = null;
-          let sharedFrameworkMat: THREE.MeshStandardMaterial | null = null;
-
           grandstandModel.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
@@ -646,14 +644,9 @@ export class TrackBuilder {
                 if (meshNameLow.includes('canopy')) {
                   mat.color.setHex(0x94a3b8);
                   mat.roughness = 0.65;
-                } else if (meshNameLow.includes('deck') || meshNameLow.includes('scaffold') || meshNameLow.includes('rail')) {
-                  if (!sharedFrameworkMat) {
-                    sharedFrameworkMat = mat.clone();
-                    sharedFrameworkMat.color.multiplyScalar(0.70);
-                    sharedFrameworkMat.roughness = Math.max(0.50, sharedFrameworkMat.roughness);
-                    sharedFrameworkMat.side = THREE.FrontSide;
-                  }
-                  mesh.material = sharedFrameworkMat;
+                } else if (meshNameLow.includes('deck') || meshNameLow.includes('scaffold')) {
+                  mat.color.multiplyScalar(0.70);
+                  mat.roughness = Math.max(0.50, mat.roughness);
                 } else if (meshNameLow.includes('seat')) {
                   mat.color.multiplyScalar(0.75);
                   mat.roughness = Math.max(0.55, mat.roughness);
@@ -669,7 +662,7 @@ export class TrackBuilder {
               }
             }
           });
-          TrackBuilder.cachedSecondaryGrandstandModel = TrackBuilder.consolidateSignModel(grandstandModel);
+          TrackBuilder.cachedSecondaryGrandstandModel = grandstandModel;
           resolve();
         },
         undefined,
@@ -3114,14 +3107,9 @@ export class TrackBuilder {
     // C. 10 Concentric Parabolic Seating Tiers & Individual Ergonomic Bucket Seats
     // Partitioned into 3 Spatial Bays along X (West: x < -20, Center: -20 to +20, East: x > 20)
     // Rendered via GPU Hardware Instancing: 0 cloned geometry allocations, 90% VRAM reduction!
-    interface SeatInstanceData {
-      matrix: THREE.Matrix4;
-      color: THREE.Color;
-    }
-    const baySeats: SeatInstanceData[][] = [[], [], []];
-    const cRed = new THREE.Color(0xdc2626);
-    const cBlue = new THREE.Color(0x1d4ed8);
-    const cGold = new THREE.Color(0xf59e0b);
+    const bayRedMatrices: THREE.Matrix4[][] = [[], [], []];
+    const bayBlueMatrices: THREE.Matrix4[][] = [[], [], []];
+    const bayGoldMatrices: THREE.Matrix4[][] = [[], [], []];
     const railingGeos: THREE.BufferGeometry[] = [];
     const seatDummy = new THREE.Object3D();
 
@@ -3200,11 +3188,11 @@ export class TrackBuilder {
 
         // Color zoning: Central VIP Gold, alternating Crimson Red & Sapphire Blue
         if (Math.abs(sx) < 13.0 && t >= 2 && t <= 7) {
-          baySeats[bayIdx].push({ matrix: seatDummy.matrix.clone(), color: cGold });
+          bayGoldMatrices[bayIdx].push(seatDummy.matrix.clone());
         } else if (t % 2 === 0) {
-          baySeats[bayIdx].push({ matrix: seatDummy.matrix.clone(), color: cRed });
+          bayRedMatrices[bayIdx].push(seatDummy.matrix.clone());
         } else {
-          baySeats[bayIdx].push({ matrix: seatDummy.matrix.clone(), color: cBlue });
+          bayBlueMatrices[bayIdx].push(seatDummy.matrix.clone());
         }
       }
     }
@@ -3236,28 +3224,53 @@ export class TrackBuilder {
       railingGeos.push(capBall);
     }
 
-    // High-performance unified seat material leveraging GPU instance colors
-    const unifiedSeatMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    // High-performance Lambert materials for stadium seats (eliminates Cook-Torrance BRDF subpixel microfacet cost)
+    const redSeatMat = new THREE.MeshLambertMaterial({ color: 0xdc2626 });
+    const blueSeatMat = new THREE.MeshLambertMaterial({ color: 0x1d4ed8 });
+    const goldSeatMat = new THREE.MeshLambertMaterial({ color: 0xf59e0b });
 
     for (let b = 0; b < 3; b++) {
-      const seats = baySeats[b];
-      if (seats.length > 0) {
-        const count = seats.length;
-        const seatInst = new THREE.InstancedMesh(baseSeatUnit, unifiedSeatMat, count);
+      if (bayRedMatrices[b].length > 0) {
+        const count = bayRedMatrices[b].length;
+        const redInst = new THREE.InstancedMesh(baseSeatUnit, redSeatMat, count);
         for (let i = 0; i < count; i++) {
-          seatInst.setMatrixAt(i, seats[i].matrix);
-          seatInst.setColorAt(i, seats[i].color);
+          redInst.setMatrixAt(i, bayRedMatrices[b][i]);
         }
-        seatInst.instanceMatrix.needsUpdate = true;
-        if (seatInst.instanceColor) {
-          seatInst.instanceColor.needsUpdate = true;
+        redInst.instanceMatrix.needsUpdate = true;
+        redInst.castShadow = false;
+        redInst.receiveShadow = false;
+        redInst.frustumCulled = true;
+        redInst.computeBoundingSphere();
+        redInst.computeBoundingBox();
+        standsGroup.add(redInst);
+      }
+      if (bayBlueMatrices[b].length > 0) {
+        const count = bayBlueMatrices[b].length;
+        const blueInst = new THREE.InstancedMesh(baseSeatUnit, blueSeatMat, count);
+        for (let i = 0; i < count; i++) {
+          blueInst.setMatrixAt(i, bayBlueMatrices[b][i]);
         }
-        seatInst.castShadow = false;
-        seatInst.receiveShadow = false;
-        seatInst.frustumCulled = true;
-        seatInst.computeBoundingSphere();
-        seatInst.computeBoundingBox();
-        standsGroup.add(seatInst);
+        blueInst.instanceMatrix.needsUpdate = true;
+        blueInst.castShadow = false;
+        blueInst.receiveShadow = false;
+        blueInst.frustumCulled = true;
+        blueInst.computeBoundingSphere();
+        blueInst.computeBoundingBox();
+        standsGroup.add(blueInst);
+      }
+      if (bayGoldMatrices[b].length > 0) {
+        const count = bayGoldMatrices[b].length;
+        const goldInst = new THREE.InstancedMesh(baseSeatUnit, goldSeatMat, count);
+        for (let i = 0; i < count; i++) {
+          goldInst.setMatrixAt(i, bayGoldMatrices[b][i]);
+        }
+        goldInst.instanceMatrix.needsUpdate = true;
+        goldInst.castShadow = false;
+        goldInst.receiveShadow = false;
+        goldInst.frustumCulled = true;
+        goldInst.computeBoundingSphere();
+        goldInst.computeBoundingBox();
+        standsGroup.add(goldInst);
       }
     }
 
@@ -3313,10 +3326,6 @@ export class TrackBuilder {
     membraneGeo.computeVertexNormals();
     structureGeos.push(membraneGeo);
 
-    // Combine all silver metal geometries (bionic wave canopy spine, wishbone struts, catenary membrane, and handrails)
-    if (railingGeos.length > 0) {
-      structureGeos.push(...railingGeos);
-    }
     if (structureGeos.length > 0) {
       const mergedStructure = safeMergeBufferGeometries(structureGeos);
       if (mergedStructure) {
@@ -3326,6 +3335,18 @@ export class TrackBuilder {
         structureMesh.castShadow = false;
         structureMesh.receiveShadow = false;
         standsGroup.add(structureMesh);
+      }
+    }
+
+    if (railingGeos.length > 0) {
+      const mergedRailing = safeMergeBufferGeometries(railingGeos);
+      if (mergedRailing) {
+        const railMesh = new THREE.Mesh(mergedRailing, this.metalSilverMat);
+        railMesh.geometry.computeBoundingSphere();
+        railMesh.geometry.computeBoundingBox();
+        railMesh.castShadow = false;
+        railMesh.receiveShadow = false;
+        standsGroup.add(railMesh);
       }
     }
 
@@ -3477,7 +3498,6 @@ export class TrackBuilder {
           const texLoader = new THREE.TextureLoader();
           let bannerTexture: THREE.Texture | null = null;
 
-          let sharedFrameworkMat: THREE.MeshStandardMaterial | null = null;
           grandstandModel.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
@@ -3493,14 +3513,9 @@ export class TrackBuilder {
                 if (meshNameLow.includes('canopy')) {
                   mat.color.setHex(0x94a3b8);
                   mat.roughness = 0.65;
-                } else if (meshNameLow.includes('deck') || meshNameLow.includes('scaffold') || meshNameLow.includes('rail')) {
-                  if (!sharedFrameworkMat) {
-                    sharedFrameworkMat = mat.clone();
-                    sharedFrameworkMat.color.multiplyScalar(0.70);
-                    sharedFrameworkMat.roughness = Math.max(0.50, sharedFrameworkMat.roughness);
-                    sharedFrameworkMat.side = THREE.FrontSide;
-                  }
-                  mesh.material = sharedFrameworkMat;
+                } else if (meshNameLow.includes('deck') || meshNameLow.includes('scaffold')) {
+                  mat.color.multiplyScalar(0.70);
+                  mat.roughness = Math.max(0.50, mat.roughness);
                 } else if (meshNameLow.includes('seat')) {
                   mat.color.multiplyScalar(0.75);
                   mat.roughness = Math.max(0.55, mat.roughness);
@@ -3519,7 +3534,7 @@ export class TrackBuilder {
           while (northGrandstandGroup.children.length > 0) {
             northGrandstandGroup.remove(northGrandstandGroup.children[0]);
           }
-          northGrandstandGroup.add(TrackBuilder.consolidateSignModel(grandstandModel));
+          northGrandstandGroup.add(grandstandModel);
         },
         undefined,
         (err) => {
@@ -4225,20 +4240,11 @@ export class TrackBuilder {
     baseHeadGeo.applyMatrix4(headLocalMatrix);
     mastParts.push(baseHeadGeo);
 
-    const spotsPerTower = 6;
-    // Consolidate the 6 spotlight housing enclosures directly into the tower geometry (sharing mastMat)
-    for (let s = 0; s < spotsPerTower; s++) {
-      const spotX = -2.1 + s * 0.84;
-      const spotHousingGeo = new THREE.BoxGeometry(0.75, 0.75, 0.4);
-      const spotMat = new THREE.Matrix4().makeTranslation(spotX, 0, 2.45);
-      const spotLocalMat = new THREE.Matrix4().multiplyMatrices(headLocalMatrix, spotMat);
-      spotHousingGeo.applyMatrix4(spotLocalMat);
-      mastParts.push(spotHousingGeo);
-    }
-
     const singleTowerGeo = safeMergeBufferGeometries(mastParts) || baseMastGeo;
 
+    const baseSpotHousingGeo = new THREE.BoxGeometry(0.75, 0.75, 0.4);
     const baseLensGeo = new THREE.PlaneGeometry(0.65, 0.65);
+
     const mastMat = new THREE.MeshStandardMaterial({ color: 0x22262e, metalness: 0.40, roughness: 0.65 });
 
     const towerCount = floodlightConfigs.length;
@@ -4246,7 +4252,12 @@ export class TrackBuilder {
     towerInst.castShadow = false;
     towerInst.receiveShadow = false;
 
+    const spotsPerTower = 6;
     const totalSpots = towerCount * spotsPerTower;
+    const spotHousingInst = new THREE.InstancedMesh(baseSpotHousingGeo, mastMat, totalSpots);
+    spotHousingInst.castShadow = false;
+    spotHousingInst.receiveShadow = false;
+
     const lensInst = new THREE.InstancedMesh(baseLensGeo, this.floodlightMat, totalSpots);
     lensInst.castShadow = false;
     lensInst.receiveShadow = false;
@@ -4264,6 +4275,10 @@ export class TrackBuilder {
         const spotX = -2.1 + s * 0.84;
         const spotIdx = tIdx * spotsPerTower + s;
 
+        const spotMat = new THREE.Matrix4().makeTranslation(spotX, 0, 2.45);
+        const spotWorldMat = new THREE.Matrix4().multiplyMatrices(headWorldMatrix, spotMat);
+        spotHousingInst.setMatrixAt(spotIdx, spotWorldMat);
+
         const lensMat = new THREE.Matrix4().makeTranslation(spotX, 0, 2.66);
         const lensWorldMat = new THREE.Matrix4().multiplyMatrices(headWorldMatrix, lensMat);
         lensInst.setMatrixAt(spotIdx, lensWorldMat);
@@ -4274,6 +4289,11 @@ export class TrackBuilder {
     towerInst.computeBoundingSphere();
     towerInst.computeBoundingBox();
     this.group.add(towerInst);
+
+    spotHousingInst.instanceMatrix.needsUpdate = true;
+    spotHousingInst.computeBoundingSphere();
+    spotHousingInst.computeBoundingBox();
+    this.group.add(spotHousingInst);
 
     lensInst.instanceMatrix.needsUpdate = true;
     lensInst.computeBoundingSphere();

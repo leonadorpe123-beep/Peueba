@@ -220,11 +220,9 @@ export class OrganicTerrainBuilder {
         const ldz = (worldZ - lakeDepression.centerZ) / lakeDepression.radiusZ;
         const rNorm = Math.hypot(ldx, ldz);
         if (rNorm < 1.0) {
-          // Inside lake basin: smoothly depress down to depth
           const bowl = 1.0 - rNorm * rNorm;
           height = -lakeDepression.depth * bowl - 0.45;
         } else if (rNorm < 1.35) {
-          // Shoreline transition zone: smoothly blend from depressed lakebed to natural terrain
           const tShore = (rNorm - 1.0) / 0.35;
           const s = tShore * tShore * (3 - 2 * tShore);
           height = height * s + (-0.45) * (1.0 - s);

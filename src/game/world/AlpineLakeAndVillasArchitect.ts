@@ -378,8 +378,6 @@ export class AlpineLakeAndVillasArchitect {
     // =========================================================================
     // VILLA 1: VILLA PANORAMA DI COMO (Overlooking Curvone Hill, X: 505, Z: 18)
     // =========================================================================
-    // Positioned on the elevated north hill overlooking the lake and Curvone apex.
-    // Base podium firmly grounded from Y=0 to Y=3.5m, with 3 tiered cantilevered terraces.
     const v1Pos = { x: 505, y: 0.0, z: 18 };
     const v1Yaw = -Math.PI * 0.46;
 
@@ -413,7 +411,6 @@ export class AlpineLakeAndVillasArchitect {
     // =========================================================================
     // VILLA 2: VILLA BELLAGIO BELVEDERE (Hairpin Braking Zone Hillside, X: 75, Z: 315)
     // =========================================================================
-    // Sits in direct line of sight through the windshield during the heaviest braking event (330 -> 85 km/h).
     const v2Pos = { x: 75, y: 0.0, z: 315 };
     const v2Yaw = Math.PI * 0.90;
 
@@ -447,7 +444,6 @@ export class AlpineLakeAndVillasArchitect {
     // =========================================================================
     // VILLA 3: MARINA CLUB & PRESIDENTIAL SUITE (Mega Straight Vista, X: 185, Z: -190)
     // =========================================================================
-    // Expansive horizontal aerodynamic silhouette flanking the main straight (visible for 8-10 seconds at 355+ km/h).
     const v3Pos = { x: 185, y: 0.0, z: -190 };
     const v3Yaw = 0.06;
 
@@ -481,11 +477,10 @@ export class AlpineLakeAndVillasArchitect {
     // =========================================================================
     // SINGLE-PASS GPU BUFFER MERGING (4 Draw Calls Total for All 3 Villas)
     // =========================================================================
-    // 1. Travertine & Limestone Podiums, Retaining Walls, and Cantilever Slabs
     const mergedTravertine = safeMergeBufferGeometries(travertineGeos);
     if (mergedTravertine) {
       const travertineMat = new THREE.MeshStandardMaterial({
-        color: 0xddd2c2, // Italian warm ivory travertine
+        color: 0xddd2c2,
         roughness: 0.44,
         metalness: 0.08,
       });
@@ -496,11 +491,10 @@ export class AlpineLakeAndVillasArchitect {
       villasGroup.add(travMesh);
     }
 
-    // 2. Champagne Bronze & Titanium Facade Trim, Columns, and Handrails
     const mergedBronze = safeMergeBufferGeometries(bronzeMetalGeos);
     if (mergedBronze) {
       const bronzeMat = new THREE.MeshStandardMaterial({
-        color: 0x9c8266, // Warm champagne bronze architectural metal
+        color: 0x9c8266,
         roughness: 0.28,
         metalness: 0.82,
       });
@@ -511,7 +505,6 @@ export class AlpineLakeAndVillasArchitect {
       villasGroup.add(bronzeMesh);
     }
 
-    // 3. Panoramic Tinted Glass Curtain Walls, Balustrades, and Skylights
     const mergedGlass = safeMergeBufferGeometries(glassGeos);
     if (mergedGlass) {
       const glassMat = new THREE.MeshStandardMaterial({
@@ -529,11 +522,10 @@ export class AlpineLakeAndVillasArchitect {
       villasGroup.add(glassMesh);
     }
 
-    // 4. Azure Infinity Edge Reflection Pools
     const mergedPools = safeMergeBufferGeometries(poolWaterGeos);
     if (mergedPools) {
       const poolMat = new THREE.MeshStandardMaterial({
-        color: 0x0ea5e9, // Bright azure pool water with deep sky specular reflection
+        color: 0x0ea5e9,
         roughness: 0.06,
         metalness: 0.30,
         envMapIntensity: 2.5,
@@ -549,11 +541,6 @@ export class AlpineLakeAndVillasArchitect {
     return villasGroup;
   }
 
-  /**
-   * Constructs an architectural villa with organic elliptical geometry,
-   * solid stepped stone ground podium extending down into the terrain,
-   * chamfered cantilever slabs, tapered bronze columns, tinted glass, and an infinity pool.
-   */
   private static constructCurvilinearVilla(
     pos: { x: number; y: number; z: number },
     rotY: number,
@@ -580,10 +567,6 @@ export class AlpineLakeAndVillasArchitect {
     const R_B = cfg.baseRadiusB;
     const baseElev = cfg.baseElevation;
 
-    // =========================================================================
-    // 0. SOLID TERRAIN PODIUM FOUNDATION (Anchors villa firmly into ground)
-    // =========================================================================
-    // Stepped stone base ensuring zero gaps between the ground and first floor
     const podiumHeight = baseElev + 0.5;
     const podiumGeo = new THREE.CylinderGeometry(R_A * 1.12, R_A * 1.18, podiumHeight, 36);
     podiumGeo.scale(1.0, 1.0, R_B / R_A);
@@ -591,7 +574,6 @@ export class AlpineLakeAndVillasArchitect {
     podiumGeo.applyMatrix4(transformMat);
     travertineGeos.push(podiumGeo);
 
-    // Stepped intermediate terrace plinth
     const plinthHeight = 0.8;
     const plinthGeo = new THREE.CylinderGeometry(R_A * 1.05, R_A * 1.08, plinthHeight, 36);
     plinthGeo.scale(1.0, 1.0, R_B / R_A);
@@ -599,9 +581,6 @@ export class AlpineLakeAndVillasArchitect {
     plinthGeo.applyMatrix4(transformMat);
     travertineGeos.push(plinthGeo);
 
-    // =========================================================================
-    // TIERS OF CURVILINEAR CANTILEVER SLABS & RESIDENCES
-    // =========================================================================
     for (let t = 0; t < cfg.tiers; t++) {
       const tierElevation = baseElev + plinthHeight + t * cfg.tierHeight;
       const tierScale = 1.0 - t * 0.12;
@@ -609,7 +588,6 @@ export class AlpineLakeAndVillasArchitect {
       const tB = R_B * tierScale;
       const tierOffsetZ = t * (cfg.cantileverOffset * 0.6);
 
-      // A. Cantilevered Elliptical Slab (Rounded architectural floor plate)
       const slabThickness = 0.55;
       const slabGeo = new THREE.CylinderGeometry(tA, tA * 1.02, slabThickness, 36);
       slabGeo.scale(1.0, 1.0, tB / tA);
@@ -617,7 +595,6 @@ export class AlpineLakeAndVillasArchitect {
       slabGeo.applyMatrix4(transformMat);
       travertineGeos.push(slabGeo);
 
-      // B. Chamfered Bronze Fascia Trim Ring around the cantilever edge
       const trimGeo = new THREE.TorusGeometry(tA * 1.01, 0.16, 10, 36);
       trimGeo.rotateX(Math.PI / 2);
       trimGeo.scale(1.0, 1.0, tB / tA);
@@ -625,7 +602,6 @@ export class AlpineLakeAndVillasArchitect {
       trimGeo.applyMatrix4(transformMat);
       bronzeMetalGeos.push(trimGeo);
 
-      // C. Panoramic Curved Glass Curtain Wall (Slightly recessed inside slab)
       const wallRecess = 0.82;
       const gA = tA * wallRecess;
       const gB = tB * wallRecess;
@@ -639,14 +615,13 @@ export class AlpineLakeAndVillasArchitect {
         1,
         true,
         -Math.PI * 0.35,
-        Math.PI * 1.70 // Panoramic forward view
+        Math.PI * 1.70
       );
       glassWallGeo.scale(1.0, 1.0, gB / gA);
       glassWallGeo.translate(0, tierElevation + slabThickness + wallHeight * 0.5, tierOffsetZ);
       glassWallGeo.applyMatrix4(transformMat);
       glassGeos.push(glassWallGeo);
 
-      // D. Slender Tapered Bronze Mullion Columns
       const numCols = 8;
       for (let c = 0; c < numCols; c++) {
         const theta = -Math.PI * 0.30 + (c / (numCols - 1)) * (Math.PI * 1.60);
@@ -659,7 +634,6 @@ export class AlpineLakeAndVillasArchitect {
         bronzeMetalGeos.push(colGeo);
       }
 
-      // E. Continuous Curved Glass Balustrade on the Terrace Deck
       const railHeight = 1.05;
       const railA = tA * 0.96;
       const railB = tB * 0.96;
@@ -679,7 +653,6 @@ export class AlpineLakeAndVillasArchitect {
       balustradeGeo.applyMatrix4(transformMat);
       glassGeos.push(balustradeGeo);
 
-      // Balustrade Handrail Tube
       const handrailGeo = new THREE.TorusGeometry(railA, 0.045, 8, 36);
       handrailGeo.rotateX(Math.PI / 2);
       handrailGeo.scale(1.0, 1.0, railB / railA);
@@ -688,7 +661,6 @@ export class AlpineLakeAndVillasArchitect {
       bronzeMetalGeos.push(handrailGeo);
     }
 
-    // Top Roof: Swept Bionic Wing Canopy with Aerodynamic Cantilever
     const topElevation = baseElev + plinthHeight + cfg.tiers * cfg.tierHeight;
     const roofA = R_A * (1.0 - (cfg.tiers - 1) * 0.12) * 1.15;
     const roofB = R_B * (1.0 - (cfg.tiers - 1) * 0.12) * 1.12;
@@ -700,35 +672,30 @@ export class AlpineLakeAndVillasArchitect {
     roofGeo.applyMatrix4(transformMat);
     travertineGeos.push(roofGeo);
 
-    // Sculptural Roof Crown Dome (Low-profile panoramic skylight)
     const skylightGeo = new THREE.SphereGeometry(roofA * 0.45, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.35);
     skylightGeo.scale(1.0, 0.35, roofB / roofA);
     skylightGeo.translate(0, topElevation + 0.60, topOffsetZ);
     skylightGeo.applyMatrix4(transformMat);
     glassGeos.push(skylightGeo);
 
-    // F. Cantilevered Infinity Edge Reflection Pool (Projecting gracefully towards track / lake)
     if (cfg.hasInfinityPool) {
       const poolA = R_A * 0.54;
       const poolB = R_B * 0.40;
       const poolPosZ = -R_B * 0.45;
       const poolElev = baseElev + plinthHeight;
 
-      // Travertine Pool Basin Coping
       const basinGeo = new THREE.CylinderGeometry(poolA * 1.10, poolA * 1.14, 0.70, 28);
       basinGeo.scale(1.0, 1.0, poolB / poolA);
       basinGeo.translate(0, poolElev + 0.35, poolPosZ);
       basinGeo.applyMatrix4(transformMat);
       travertineGeos.push(basinGeo);
 
-      // Specular Azure Water Surface
       const poolWater = new THREE.CylinderGeometry(poolA, poolA, 0.12, 28);
       poolWater.scale(1.0, 1.0, poolB / poolA);
       poolWater.translate(0, poolElev + 0.66, poolPosZ);
       poolWater.applyMatrix4(transformMat);
       poolWaterGeos.push(poolWater);
 
-      // Glass overflow retaining lip on infinity edge
       const overflowLip = new THREE.CylinderGeometry(poolA * 1.01, poolA * 1.01, 0.32, 28, 1, true, Math.PI * 0.75, Math.PI * 0.5);
       overflowLip.scale(1.0, 1.0, poolB / poolA);
       overflowLip.translate(0, poolElev + 0.80, poolPosZ);
